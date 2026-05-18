@@ -119,6 +119,7 @@ fun AppNavigation(viewModel: AppViewModel, onViewDeal: (Deal) -> Boolean, onShar
                     searchQuery = state.searchQuery,
                     selectedStore = state.selectedStore,
                     loading = state.isLoading,
+                    previewMode = visibleDeals.any { it.isPreviewDeal },
                     onSearch = viewModel::search,
                     onStore = viewModel::selectStore,
                     onRefresh = viewModel::refreshAll,
