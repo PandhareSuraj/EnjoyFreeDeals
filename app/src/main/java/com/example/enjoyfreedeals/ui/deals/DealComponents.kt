@@ -90,6 +90,7 @@ fun DealCard(
                 ) {
                     if (deal.isHotDeal) Badge("Hot Deal", DealRed)
                     if (deal.isFreeDeal) Badge("Free Deal", DealGreen)
+                    if (deal.isPreviewDeal) Badge("Preview", MaterialTheme.colorScheme.primary)
                     if (deal.expiryDate - System.currentTimeMillis() < 86_400_000L) Badge("Limited Time", DealYellow, Color(0xFF1E1E1E))
                     if (deal.isVerified) Badge("Verified", DealGreen)
                     if (deal.displayCurrentPrice <= deal.displayLowestPrice) Badge("Lowest Price Now", DealYellow, Color(0xFF1E1E1E))

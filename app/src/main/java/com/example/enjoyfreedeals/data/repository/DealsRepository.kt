@@ -28,7 +28,7 @@ class DealsRepository(private val context: Context) {
     private val readNotifications = mutableSetOf<String>()
 
     fun getLiveDeals(): Flow<List<Deal>> = callbackFlow {
-        val currentDeals = refreshLiveDeals().getOrElse { filterBestPriceDeals(MockData.deals) }.toMutableList()
+        val currentDeals = refreshLiveDeals().getOrElse { emptyList() }.toMutableList()
         trySend(currentDeals.toList())
 
         if (!SupabaseService.isConfigured) {
@@ -65,10 +65,10 @@ class DealsRepository(private val context: Context) {
     }
 
     suspend fun refreshLiveDeals(): Result<List<Deal>> = runCatching {
-        if (!SupabaseService.isConfigured) return@runCatching filterBestPriceDeals(MockData.deals)
+        if (!SupabaseService.isConfigured) return@runCatching previewDeals()
         val response = SupabaseApi.get("deals", "is_active=eq.true&order=created_at.desc")
         filterBestPriceDeals(SupabaseApi.json.decodeFromString<List<Deal>>(response))
-    }.recoverCatching { filterBestPriceDeals(MockData.deals) }
+    }.recoverCatching { if (SupabaseService.isConfigured) emptyList() else previewDeals() }
 
     suspend fun getDeals(): Result<List<Deal>> = refreshLiveDeals()
 
@@ -169,6 +169,18 @@ class DealsRepository(private val context: Context) {
 
     private fun filterBestPriceDeals(deals: List<Deal>): List<Deal> = deals.filter(::isBestPriceDeal)
 
+    private fun previewDeals(): List<Deal> = MockData.deals
+        .filter { deal ->
+            val current = deal.displayCurrentPrice
+            val lowest = deal.displayLowestPrice
+            val isNotExpired = deal.expiryDate == 0L || deal.expiryDate > System.currentTimeMillis()
+            isNotExpired &&
+                deal.availability.equals("in_stock", ignoreCase = true) &&
+                (current > 0.0 || deal.isFreeDeal) &&
+                (deal.discountPercent >= 60 || deal.isNearLowestPrice || deal.isHotDeal || deal.isFreeDeal || (lowest > 0.0 && current <= lowest * 1.10))
+        }
+        .sortedWith(compareByDescending<Deal> { it.discountPercent >= 60 }.thenByDescending { it.updatedAtMillis })
+
     private fun isBestPriceDeal(deal: Deal): Boolean {
         val current = deal.displayCurrentPrice
         val lowest = deal.displayLowestPrice
@@ -177,8 +189,8 @@ class DealsRepository(private val context: Context) {
         val isNotExpired = deal.expiryDate == 0L || deal.expiryDate > System.currentTimeMillis()
         val hasQualitySignal = deal.isFreeDeal ||
             deal.isHotDeal ||
-            deal.discountPercent >= 30 ||
-            current <= lowest ||
+            deal.discountPercent >= 60 ||
+            (current > 0.0 && current <= lowest) ||
             (lowest > 0.0 && current <= lowest * 1.10)
         return deal.isActive &&
             isNotExpired &&

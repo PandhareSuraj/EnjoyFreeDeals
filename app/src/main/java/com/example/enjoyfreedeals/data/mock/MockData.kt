@@ -99,33 +99,16 @@ object MockData {
         highestPrice = original,
         priceHistory = listOf(original, original * 0.88, original * 0.76, price * 1.08, price),
         isLowestPriceNow = free,
-        dealUrl = realStoreUrl(store, title),
+        dealUrl = "",
         affiliateUrl = "",
         targetUrl = "",
         sourcePlatform = store,
-        sourceType = if (free) "URL unavailable" else "Live Affiliate API",
+        sourceType = "Development Mock - URL unavailable",
         isHotDeal = hot,
         isFreeDeal = free,
         isVerified = true,
-        availability = if (free) "out_of_stock" else "in_stock",
+        availability = "in_stock",
         clickCount = discount * 3,
         expiryDate = System.currentTimeMillis() + if (hot) 6 * 60 * 60 * 1000 else 3 * 86_400_000L
     )
-
-    private fun realStoreUrl(store: String, title: String): String = when (store) {
-        "Amazon" -> "https://www.amazon.in/dp/B0${query(title).take(8).uppercase().padEnd(8, '0')}"
-        "Flipkart" -> "https://www.flipkart.com/${query(title).replace("+", "-")}/p/mock-${query(title)}"
-        "Meesho" -> "https://www.meesho.com/${query(title).replace("+", "-")}/p/mock${query(title).take(5)}"
-        "Myntra" -> "https://www.myntra.com/${query(title).replace("+", "-")}/mock-product"
-        "Snapdeal" -> "https://www.snapdeal.com/product/${query(title).replace("+", "-")}/mock"
-        "Ajio" -> "https://www.ajio.com/${query(title).replace("+", "-")}/p/mock"
-        "TataCliq" -> "https://www.tatacliq.com/${query(title).replace("+", "-")}/p-mock"
-        "Nykaa" -> "https://www.nykaa.com/${query(title).replace("+", "-")}/p/mock"
-        "Croma" -> "https://www.croma.com/${query(title).replace("+", "-")}/p/mock"
-        "JioMart" -> "https://www.jiomart.com/p/${query(title).replace("+", "-")}/mock"
-        "BigBasket" -> "https://www.bigbasket.com/pd/mock/${query(title).replace("+", "-")}/"
-        else -> ""
-    }
-
-    private fun query(value: String): String = value.trim().lowercase().replace(Regex("[^a-z0-9]+"), "+").trim('+')
 }

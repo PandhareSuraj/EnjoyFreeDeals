@@ -52,6 +52,7 @@ fun HomeScreen(
     searchQuery: String,
     selectedStore: String,
     loading: Boolean,
+    previewMode: Boolean,
     onSearch: (String) -> Unit,
     onStore: (String) -> Unit,
     onRefresh: () -> Unit,
@@ -97,12 +98,29 @@ fun HomeScreen(
             items(3) { ShimmerDealPlaceholder() }
             return@LazyColumn
         }
+        if (previewMode) {
+            item {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.18f), RoundedCornerShape(8.dp))
+                        .padding(14.dp)
+                ) {
+                    Text(
+                        "Connect Supabase to load live affiliate deals. Showing preview deals.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
         item { BannerSlider(deals.filter { it.isHotDeal }.ifEmpty { deals }.take(4)) }
+        dealSection("Latest High Discount", deals.filter { it.discountPercent >= 60 }.sortedByDescending { it.updatedAtMillis }, savedDealIds, onView, onSave, onShare)
+        dealSection("Near Lowest Price", deals.filter { it.isNearLowestPrice }, savedDealIds, onView, onSave, onShare)
+        dealSection("60%+ Deals", deals.filter { it.discountPercent >= 60 }, savedDealIds, onView, onSave, onShare)
         dealSection("Live Deals", deals, savedDealIds, onView, onSave, onShare)
-        dealSection("Lowest Price Today", deals.filter { it.displayCurrentPrice <= it.displayLowestPrice }, savedDealIds, onView, onSave, onShare)
         dealSection("Recently Updated", deals.sortedByDescending { it.updatedAtMillis }.take(4), savedDealIds, onView, onSave, onShare)
-        dealSection("Hot Affiliate Deals", deals.filter { it.isHotDeal }, savedDealIds, onView, onSave, onShare)
-        dealSection("Free Deals", deals.filter { it.isFreeDeal }, savedDealIds, onView, onSave, onShare)
     }
 }
 

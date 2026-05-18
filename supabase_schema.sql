@@ -68,9 +68,24 @@ create table if not exists public.affiliate_sources (
   source_type text not null,
   api_url text,
   affiliate_tag text,
+  auth_secret_name text,
+  field_mapping jsonb not null default '{}'::jsonb,
+  min_discount_percent int not null default 60,
+  only_near_lowest boolean not null default false,
   is_active boolean default true,
   last_synced_at timestamptz
 );
+
+alter table public.affiliate_sources add column if not exists auth_secret_name text;
+alter table public.affiliate_sources add column if not exists field_mapping jsonb not null default '{}'::jsonb;
+alter table public.affiliate_sources add column if not exists min_discount_percent int not null default 60;
+alter table public.affiliate_sources add column if not exists only_near_lowest boolean not null default false;
+
+comment on table public.affiliate_sources is
+'Approved affiliate/API source configuration. Android must not scrape ecommerce sites; backend workers use these sources and write normalized exact-offer rows.';
+
+comment on column public.deals.affiliate_url is
+'Exact affiliate/product offer URL. Do not store home, search, category, mock, or placeholder URLs.';
 
 create table if not exists public.categories (
   category_id text primary key,
@@ -156,22 +171,25 @@ insert into public.categories (category_id, name, icon, gradient_color_1, gradie
 ('bank', 'Bank Offers', 'Card', '#1E1E1E', '#006B2E')
 on conflict (category_id) do nothing;
 
-insert into public.affiliate_sources (store_name, source_type, api_url, affiliate_tag) values
-('Amazon', 'affiliate_api', null, 'YOUR_AMAZON_TAG'),
-('Flipkart', 'affiliate_api', null, 'YOUR_FLIPKART_TAG'),
-('Myntra', 'affiliate_api', null, 'YOUR_MYNTRA_TAG'),
-('Ajio', 'affiliate_api', null, 'YOUR_AJIO_TAG'),
-('Croma', 'affiliate_api', null, 'YOUR_CROMA_TAG'),
-('Nykaa', 'affiliate_api', null, 'YOUR_NYKAA_TAG')
+insert into public.affiliate_sources (
+  store_name, source_type, api_url, affiliate_tag, auth_secret_name,
+  field_mapping, min_discount_percent, only_near_lowest, is_active
+) values
+('Amazon', 'affiliate_api', null, 'YOUR_AMAZON_TAG', 'AMAZON_FEED_TOKEN', '{}'::jsonb, 60, false, false),
+('Flipkart', 'affiliate_api', null, 'YOUR_FLIPKART_TAG', 'FLIPKART_FEED_TOKEN', '{}'::jsonb, 60, false, false),
+('Myntra', 'affiliate_api', null, 'YOUR_MYNTRA_TAG', 'MYNTRA_FEED_TOKEN', '{}'::jsonb, 60, false, false),
+('Ajio', 'affiliate_api', null, 'YOUR_AJIO_TAG', 'AJIO_FEED_TOKEN', '{}'::jsonb, 60, false, false),
+('Croma', 'affiliate_api', null, 'YOUR_CROMA_TAG', 'CROMA_FEED_TOKEN', '{}'::jsonb, 60, false, false),
+('Nykaa', 'affiliate_api', null, 'YOUR_NYKAA_TAG', 'NYKAA_FEED_TOKEN', '{}'::jsonb, 60, false, false)
 on conflict do nothing;
 
 insert into public.deals (
   deal_id, external_product_id, title, description, product_image, original_price,
   discounted_price, current_price, lowest_price, highest_price, discount_percent,
   store_name, category_id, deal_type, price_history, deal_url, source_platform,
-  source_type, is_hot_deal, is_free_deal, is_verified, availability, expiry_date,
+  source_type, is_hot_deal, is_free_deal, is_verified, is_active, availability, expiry_date,
   last_price_checked_at
 ) values
-('amazon-boat-earbuds', 'amazon-boat-earbuds-demo', 'Amazon - boAt Earbuds', 'Demo backend-approved live deal.', '', 2999, 1199, 1199, 1199, 2999, 60, 'Amazon', 'electronics', 'Discount', '[2999,1899,1199]', 'https://www.amazon.in/dp/B0BOATEARBUDS', 'Amazon', 'Live Affiliate API', true, false, true, 'in_stock', 1893456000000, now()),
-('flipkart-realme-phone', 'flipkart-realme-phone-demo', 'Flipkart - Realme Smartphone', 'Demo backend-approved live deal.', '', 14999, 11999, 11999, 11999, 14999, 20, 'Flipkart', 'mobiles', 'Discount', '[14999,12999,11999]', 'https://www.flipkart.com/realme-smartphone/p/mock-realme-phone', 'Flipkart', 'Live Affiliate API', false, false, true, 'in_stock', 1893456000000, now())
+('amazon-boat-earbuds', 'amazon-boat-earbuds-demo', 'Amazon - boAt Earbuds', 'Demo inactive row. Replace with approved affiliate API data before publishing.', '', 2999, 1199, 1199, 1199, 2999, 60, 'Amazon', 'electronics', 'Discount', '[2999,1899,1199]', '', 'Amazon', 'Demo - URL unavailable', true, false, true, false, 'out_of_stock', 0, now()),
+('flipkart-realme-phone', 'flipkart-realme-phone-demo', 'Flipkart - Realme Smartphone', 'Demo inactive row. Replace with approved affiliate API data before publishing.', '', 14999, 11999, 11999, 11999, 14999, 20, 'Flipkart', 'mobiles', 'Discount', '[14999,12999,11999]', '', 'Flipkart', 'Demo - URL unavailable', false, false, true, false, 'out_of_stock', 0, now())
 on conflict (deal_id) do nothing;

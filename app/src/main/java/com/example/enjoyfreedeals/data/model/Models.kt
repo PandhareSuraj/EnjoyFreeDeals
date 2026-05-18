@@ -106,6 +106,7 @@ data class Deal(
     val displayCurrentPrice: Double get() = currentPrice.takeIf { it > 0.0 } ?: discountedPrice
     val displayLowestPrice: Double get() = lowestPrice.takeIf { it > 0.0 } ?: displayCurrentPrice
     val isNearLowestPrice: Boolean get() = displayLowestPrice > 0.0 && displayCurrentPrice <= displayLowestPrice * 1.10
+    val isPreviewDeal: Boolean get() = sourceType.contains("Development Mock", ignoreCase = true)
     val createdAtMillis: Long get() = parseTimestampMillis(createdAt)
     val updatedAtMillis: Long get() = parseTimestampMillis(updatedAt)
     val lastPriceCheckedAtMillis: Long get() = parseTimestampMillis(lastPriceCheckedAt)
