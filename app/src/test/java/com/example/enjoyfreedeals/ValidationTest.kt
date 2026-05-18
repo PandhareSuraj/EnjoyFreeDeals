@@ -32,19 +32,30 @@ class ValidationTest {
         assertTrue(MockData.deals.any { it.storeName == "Amazon" && it.discountPercent == 60 })
         assertTrue(MockData.deals.any { it.isFreeDeal && it.discountedPrice == 0.0 })
         assertTrue(MockData.deals.none { it.bestUrl.contains("example", ignoreCase = true) })
-        assertTrue(MockData.deals.filterNot { it.sourceType == "URL unavailable" }.all { it.bestUrl.isNotBlank() })
+        assertTrue(MockData.deals.all { it.sourceType.contains("URL unavailable", ignoreCase = true) })
+        assertTrue(MockData.deals.all { it.bestUrl.isBlank() })
     }
 
     @Test
     fun checkDealUsesAffiliateDealThenTargetUrlPriority() {
-        val affiliateDeal = Deal(affiliateUrl = "affiliate.partner.test/deal", dealUrl = "https://store.test/deal", targetUrl = "https://target.test/deal")
-        val directDeal = Deal(dealUrl = "store.test/deal", targetUrl = "https://target.test/deal")
-        val targetDeal = Deal(targetUrl = "https://target.test/deal")
-        assertEquals("https://affiliate.partner.test/deal", DealUrlUtils.bestDealUrl(affiliateDeal))
-        assertEquals("https://store.test/deal", DealUrlUtils.bestDealUrl(directDeal))
-        assertEquals("https://target.test/deal", DealUrlUtils.bestDealUrl(targetDeal))
-        assertTrue(DealUrlUtils.isValidWebUrl("target.test/deal"))
+        val affiliateDeal = Deal(affiliateUrl = "affiliate.partner.test/offer/amazon-boat-earbuds-123456", dealUrl = "https://store.test/product/123456", targetUrl = "https://target.test/product/123456")
+        val directDeal = Deal(dealUrl = "store.test/product/123456", targetUrl = "https://target.test/product/123456")
+        val targetDeal = Deal(targetUrl = "https://target.test/product/123456")
+        assertEquals("https://affiliate.partner.test/offer/amazon-boat-earbuds-123456", DealUrlUtils.bestDealUrl(affiliateDeal))
+        assertEquals("https://store.test/product/123456", DealUrlUtils.bestDealUrl(directDeal))
+        assertEquals("https://target.test/product/123456", DealUrlUtils.bestDealUrl(targetDeal))
+        assertTrue(DealUrlUtils.isValidWebUrl("target.test/product/123456"))
         assertTrue(!DealUrlUtils.isValidWebUrl(""))
+    }
+
+    @Test
+    fun exactDealValidationRejectsSearchHomeAndMockUrls() {
+        assertTrue(DealUrlUtils.isExactDealUrl("https://www.amazon.in/dp/B09ABC1234"))
+        assertTrue(DealUrlUtils.isExactDealUrl("https://go.enjoyfreedeals.in/offer?url=https%3A%2F%2Fwww.amazon.in%2Fdp%2FB09ABC1234"))
+        assertTrue(!DealUrlUtils.isExactDealUrl("https://www.amazon.in/"))
+        assertTrue(!DealUrlUtils.isExactDealUrl("https://www.amazon.in/s?k=earbuds"))
+        assertTrue(!DealUrlUtils.isExactDealUrl("https://www.flipkart.com/search?q=phone"))
+        assertTrue(!DealUrlUtils.isExactDealUrl("https://www.flipkart.com/realme-phone/p/mock-realme-phone"))
     }
 
     @Test

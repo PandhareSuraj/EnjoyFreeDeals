@@ -13,6 +13,8 @@ import com.example.enjoyfreedeals.data.model.UserProfile
 import com.example.enjoyfreedeals.data.repository.AuthRepository
 import com.example.enjoyfreedeals.data.repository.DealNotificationManager
 import com.example.enjoyfreedeals.data.repository.DealsRepository
+import com.example.enjoyfreedeals.data.remote.SupabaseService
+import com.example.enjoyfreedeals.utils.DealUrlUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -86,7 +88,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         dealsRepository.getLiveDeals()
             .catch { _state.update { it.copy(message = "Live deals are taking longer than expected. Showing saved sample deals.") } }
             .collect { liveDeals ->
-                _state.update { it.copy(isLoading = false, deals = liveDeals) }
+                _state.update {
+                    it.copy(
+                        isLoading = false,
+                        deals = liveDeals,
+                        message = when {
+                            liveDeals.isEmpty() && SupabaseService.isConfigured -> "No live deals found. Add approved API sources in Supabase."
+                            liveDeals.any { deal -> deal.isPreviewDeal } -> "Connect Supabase to load live affiliate deals. Showing preview deals."
+                            else -> it.message
+                        }
+                    )
+                }
             }
     }
 
@@ -107,6 +119,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 notifications = notifications,
                 message = when {
                     deals.isEmpty() -> "No deals are available right now. Please check again soon."
+                    deals.any { deal -> deal.isPreviewDeal } -> "Connect Supabase to load live affiliate deals. Showing preview deals."
                     categories.isEmpty() -> "Categories are loading slowly. Please try again."
                     else -> null
                 }
@@ -192,12 +205,36 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 }
 
 private fun filterDeal(deal: Deal, selectedFilter: String): Boolean = when (selectedFilter) {
-    "All" -> true
-    "Free Deals" -> deal.isFreeDeal || deal.displayCurrentPrice == 0.0 || deal.dealType.equals("Free Deal", true)
-    "Lowest Price" -> deal.displayCurrentPrice <= deal.displayLowestPrice
-    "Hot Deals" -> deal.isHotDeal
-    "Coupons" -> deal.couponCode.isNotBlank() || deal.dealType.equals("Coupon", true)
-    "Cashback" -> deal.cashbackText.isNotBlank() || deal.dealType.equals("Cashback", true)
-    "Bank Offers" -> deal.categoryId == "bank" || deal.dealType.equals("Bank Offer", true)
-    else -> deal.storeName.equals(selectedFilter, ignoreCase = true)
+    "All" -> deal.isVisibleLiveDeal()
+    "Free Deals" -> deal.isVisibleLiveDeal() && (deal.isFreeDeal || deal.displayCurrentPrice == 0.0 || deal.dealType.equals("Free Deal", true))
+    "Lowest Price" -> deal.isVisibleLiveDeal() && deal.displayCurrentPrice <= deal.displayLowestPrice
+    "60%+ Deals" -> deal.isVisibleLiveDeal() && deal.discountPercent >= 60
+    "Hot Deals" -> deal.isVisibleLiveDeal() && deal.isHotDeal
+    "Coupons" -> deal.isVisibleLiveDeal() && (deal.couponCode.isNotBlank() || deal.dealType.equals("Coupon", true))
+    "Cashback" -> deal.isVisibleLiveDeal() && (deal.cashbackText.isNotBlank() || deal.dealType.equals("Cashback", true))
+    "Bank Offers" -> deal.isVisibleLiveDeal() && (deal.categoryId == "bank" || deal.dealType.equals("Bank Offer", true))
+    else -> deal.isVisibleLiveDeal() && deal.storeName.equals(selectedFilter, ignoreCase = true)
+}
+
+private fun Deal.isVisibleLiveDeal(): Boolean {
+    val current = displayCurrentPrice
+    val lowest = displayLowestPrice
+    val notExpired = expiryDate == 0L || expiryDate > System.currentTimeMillis()
+    val hasQualitySignal = isFreeDeal ||
+        isHotDeal ||
+        discountPercent >= 60 ||
+        (current > 0.0 && current <= lowest) ||
+        (lowest > 0.0 && current <= lowest * 1.10)
+    if (!SupabaseService.isConfigured && isPreviewDeal) {
+        return notExpired &&
+            availability.equals("in_stock", ignoreCase = true) &&
+            (current > 0.0 || isFreeDeal) &&
+            hasQualitySignal
+    }
+    return isActive &&
+        notExpired &&
+        availability.equals("in_stock", ignoreCase = true) &&
+        DealUrlUtils.bestDealUrl(this).isNotBlank() &&
+        (current > 0.0 || isFreeDeal) &&
+        hasQualitySignal
 }

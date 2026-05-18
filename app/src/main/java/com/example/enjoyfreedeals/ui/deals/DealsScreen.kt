@@ -60,7 +60,7 @@ fun DealsScreen(
             )
         }
         item { OutlinedButton(onClick = onRefresh, modifier = Modifier.fillParentMaxWidth()) { Text("Pull to refresh live deals") } }
-        item { FilterChipRow(listOf("All", "Amazon", "Flipkart", "Meesho", "Myntra", "Ajio", "Croma", "Nykaa", "Free Deals", "Lowest Price", "Hot Deals"), selectedStore, onStore) }
+        item { FilterChipRow(listOf("All", "Amazon", "Flipkart", "Meesho", "Myntra", "Ajio", "Croma", "Nykaa", "Free Deals", "Lowest Price", "60%+ Deals", "Hot Deals"), selectedStore, onStore) }
         item {
             var expanded by remember { mutableStateOf(false) }
             ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {

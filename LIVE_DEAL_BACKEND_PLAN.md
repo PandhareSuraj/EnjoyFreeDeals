@@ -37,6 +37,7 @@ Run `fetch-live-deals`:
 Each run should:
 - Read active `affiliate_sources`.
 - Fetch product title, image, MRP, current price, availability, category, store, and exact offer URL.
+- Reject homepages, search pages, category/listing pages, mock links, and placeholder URLs before writing to Supabase.
 - Generate `affiliate_url` using your affiliate redirect system.
 - Upsert into `deals`.
 - Insert every observed price into `deal_price_history`.
